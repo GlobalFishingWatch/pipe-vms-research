@@ -1,2 +1,3 @@
 google-cloud-bigquery
 jinja2
+pytest
