@@ -2,7 +2,7 @@
 Processes the summarized VMS research tables
 """
 
-__version__ = '3.0.0'
+__version__ = '3.0.1'
 __author__ = 'Matias Piano'
 __email__ = 'matias@globalfishingwatch.org'
 __source__ = 'https://github.com/GlobalFishingWatch/pipe-research'

@@ -1,0 +1,23 @@
+#standardSQL
+
+WITH
+total_hours_per_day as (SELECT
+  EXTRACT(date
+  FROM
+    timestamp) AS d,
+  SUM(hours) AS total_hours,
+  if(SUM(hours) < `{{ threshold_accepted }}`, 0, SUM(hours)) as threshold_accepted
+FROM
+  `{{ source }}`
+WHERE
+  nnet_score > 0.5
+  AND timestamp between '{{ date_from }}' and '{{ date_to }}'
+GROUP BY
+  1
+ORDER BY
+  1)
+
+SELECT
+  if (count(*) = 0, 1, 0) as is_threshold_accomplished
+FROM total_hours_per_day
+WHERE threshold_accepted = 0

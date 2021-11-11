@@ -9,6 +9,13 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 ## [Unreleased]
 
 
+## v3.0.1 - 2021-11-11
+
+### Added
+
+* [PIPELINE-617](https://globalfishingwatch.atlassian.net/browse/PIPELINE-617):
+  Query that checks if there are fishing hours under a particular threshold per day.
+
 ## v3.0.0 - 2021-10-25
 
 ### Added
