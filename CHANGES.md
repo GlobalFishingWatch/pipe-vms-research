@@ -9,6 +9,13 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 ## [Unreleased]
 
 
+## v3.0.2 - 2021-11-19
+
+### Added
+
+* [PIPELINE-626](https://globalfishingwatch.atlassian.net/browse/PIPELINE-626): Adds
+  the lowercase of the `source` property in the output of the research positions.
+
 ## v3.0.1 - 2021-11-11
 
 ### Added
