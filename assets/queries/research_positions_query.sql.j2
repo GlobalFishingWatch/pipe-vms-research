@@ -23,7 +23,8 @@ WITH
     nnet_score,
     distance_from_port_m,
     distance_from_shore_m,
-    elevation_m
+    elevation_m,
+    lower(source) as source
   FROM
     `{{ source }}`
   WHERE _table_suffix >= '{{ date_from }}' and _table_suffix < '{{ date_to }}'),
@@ -56,6 +57,7 @@ SELECT
   ssvid,
   distance_from_port_m,
   distance_from_shore_m,
-  elevation_m
+  elevation_m,
+  source
 FROM
   pos_hours
