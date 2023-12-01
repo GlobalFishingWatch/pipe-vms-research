@@ -58,13 +58,13 @@ def delete_partition(client, destination_table, date_from, date_to):
     print(f'delete_partition result: {result}')
 
 
-if __name__ == '__main__':
+def run_research_positions(arguments):
     parser = argparse.ArgumentParser(description='Generates the research summarized tables.')
     parser.add_argument('-i','--source_table', help='The BQ source table (Format str, ex: datset.table).', required=True)
     parser.add_argument('-o','--destination_table', help='The BQ destination table (Format str, ex: datset.table).', required=True)
     parser.add_argument('-dr','--date_range', help='The date range to be processed (Format str YYYY-MM-DD[,YYYY-MM-DD]).', required=True)
 
-    args = parser.parse_args()
+    args = parser.parse_args(arguments)
 
     start_time = time.time()
 
