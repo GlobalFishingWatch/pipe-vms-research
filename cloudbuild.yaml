@@ -4,8 +4,8 @@ steps:
   id: build
   args: [
     'build',
-    '-t', '${_BASE_IMAGE_NAME}:latest'
-    '-t', '${_BASE_IMAGE_NAME}:${TAG_NAME}'
+    '-t', '${_BASE_IMAGE_NAME}:latest',
+    '-t', '${_BASE_IMAGE_NAME}:${TAG_NAME}',
     '.'
   ]
 
@@ -14,8 +14,7 @@ steps:
   args: [
     'run',
     '--rm',
-    '--entrypoint',
-    'py.test',
+    '--entrypoint', 'py.test',
     '${_BASE_IMAGE_NAME}:latest'
   ]
   waitFor: [ 'build' ]
