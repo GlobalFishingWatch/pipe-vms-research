@@ -41,10 +41,10 @@ def create_table_if_not_exists(client, destination_table_ref):
         ]
         table = bigquery.Table(destination_table_ref, schema=schema)
         table.time_partitioning = bigquery.TimePartitioning(
-            type_ = bigquery.TimePartitioningType.DAY,
+            type_ = bigquery.TimePartitioningType.MONTH,
             field = "timestamp",  # name of column to use for partitioning
         )
-        table.clustering_fields = ["source"]
+        table.clustering_fields = ["timestamp", "ssvid"]
         table = client.create_table(table)
 
 
