@@ -4,8 +4,8 @@ steps:
   id: build
   args: [
     'build',
-    '-t', '${_BASE_IMAGE_NAME}:latest'
-    '-t', '${_BASE_IMAGE_NAME}:${TAG_NAME}'
+    '-t', '${_BASE_IMAGE_NAME}:latest',
+    '-t', '${_BASE_IMAGE_NAME}:${TAG_NAME}',
     '.'
   ]
 
