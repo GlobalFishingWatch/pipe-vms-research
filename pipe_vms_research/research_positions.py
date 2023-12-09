@@ -48,6 +48,63 @@ def create_table_if_not_exists(client, destination_table_ref):
         table = client.create_table(table)
 
 
+def create_table_if_not_exists2(client, destination_table_ref):
+    """Creates table if it does not exists
+
+    :param client: Client of BQ.
+    :type client: BigQuery.Client
+    :param destination_table_ref: Reference of a Table in BQ.
+    :type destination_table_ref: BigQuery.TableReference
+    """
+    try:
+        table = client.get_table(destination_table_ref) #API request
+    except NotFound:
+        schema = [
+            bigquery.SchemaField('msgid', 'STRING', description='The message id.'),
+            bigquery.SchemaField('ssvid', 'STRING', description='The ssvid.'),
+            bigquery.SchemaField('seg_id', 'STRING', description='The segment identification.'),
+            bigquery.SchemaField('timestamp', 'TIMESTAMP', description='The moment when was capture the position.'),
+            bigquery.SchemaField('lat', 'FLOAT', description='The latitude where the vessel was positioned.'),
+            bigquery.SchemaField('lon', 'FLOAT', description='The longitude where the vessel was positioned.'),
+            bigquery.SchemaField('speed_knots', 'FLOAT', description='The speed of the vessel.'),
+            bigquery.SchemaField('heading', 'FLOAT', description='The course of the vessel.'),
+            bigquery.SchemaField('course', 'FLOAT', description='The course of the vessel.'),
+            bigquery.SchemaField('meters_to_prev', 'FLOAT', description='The meters to previous position in the segment.'),
+            bigquery.SchemaField('implied_speed_knots', 'FLOAT', description='The implied speed between previous position of the vessel.'),
+            bigquery.SchemaField('hours', 'FLOAT', description='The hours to the previous position in the segment.'),
+            bigquery.SchemaField('night', 'BOOLEAN', description='Indicates if it is night.'),
+            bigquery.SchemaField('nnet_score', 'FLOAT', description='The score of neural network to indicate that was fishing.'),
+            bigquery.SchemaField('logistic_score', 'FLOAT', description='The score of logistic algoritm to indicate that was fishing.'),
+            bigquery.SchemaField('type', 'STRING', description='The VMS type.'),
+            bigquery.SchemaField('source', 'STRING', description='The source where the score was get.'),
+            bigquery.SchemaField('elevation_m', 'FLOAT', description='The depth at that position.'),
+            bigquery.SchemaField('distance_from_shore_m', 'FLOAT', description='The distance from shore.'),
+            bigquery.SchemaField('distance_from_port_m', 'FLOAT', description='The distance from port.'),
+            bigquery.SchemaField('regions', 'RECORD', description='The distance from port.',
+                 fields=[
+                    bigquery.SchemaField('mregion', 'STRING', mode='REPEATED', description='marine region code'),
+                    bigquery.SchemaField('arg', 'STRING', mode='REPEATED', description=''),
+                    bigquery.SchemaField('eez', 'STRING', mode='REPEATED', description='EEZ id (see `gfw_research.eez_info`)'),
+                    bigquery.SchemaField('mparu', 'STRING', mode='REPEATED', description='MPA restricted use'),
+                    bigquery.SchemaField('vme', 'STRING', mode='REPEATED', description=''),
+                    bigquery.SchemaField('kkp', 'STRING', mode='REPEATED', description='Indonesian fishing regions'),
+                    bigquery.SchemaField('ocean', 'STRING', mode='REPEATED', description='the ocean assigned to the point'),
+                    bigquery.SchemaField('hsp', 'STRING', mode='REPEATED', description='High Seas pocket'),
+                    bigquery.SchemaField('other', 'STRING', mode='REPEATED', description=''),
+                    bigquery.SchemaField('fao', 'STRING', mode='REPEATED', description='FAO major area and/or sub-area'),
+                    bigquery.SchemaField('mpant', 'STRING', mode='REPEATED', description='MPA no take'),
+                    bigquery.SchemaField('ames', 'STRING', mode='REPEATED', description=''),
+                    bigquery.SchemaField('rfmo', 'STRING', mode='REPEATED', description='RFMO(s) with jurisdiction over area'),
+                    bigquery.SchemaField('major_fao', 'STRING', mode='REPEATED', description='FAO major fishing area')
+                 ])
+        ]
+        table = bigquery.Table(destination_table_ref, schema=schema)
+        table.time_partitioning = bigquery.TimePartitioning(
+            type_ = bigquery.TimePartitioningType.DAY,
+            field = "timestamp",  # name of column to use for partitioning
+        )
+        table = client.create_table(table)
+
 
 def delete_partition(client, destination_table, date_from, date_to):
     query_job = client.query(f"""
@@ -63,6 +120,7 @@ def run_research_positions(arguments):
     parser.add_argument('-i','--source_table', help='The BQ source table (Format str, ex: datset.table).', required=True)
     parser.add_argument('-o','--destination_table', help='The BQ destination table (Format str, ex: datset.table).', required=True)
     parser.add_argument('-dr','--date_range', help='The date range to be processed (Format str YYYY-MM-DD[,YYYY-MM-DD]).', required=True)
+    parser.add_argument('-is','--sunrise_table', help='The BQ sunrise table (Format str, ex: datset.table).', required=True)
 
     args = parser.parse_args(arguments)
 
@@ -77,8 +135,12 @@ def run_research_positions(arguments):
 
     # Apply template
     env = Environment(loader=FileSystemLoader('./assets/queries/'))
-    template = env.get_template('research_positions_query.sql.j2')
-    query = template.render(date_from=date_from.strftime('%Y%m%d'), date_to=date_to.strftime('%Y%m%d'), source=f'{args.source_table}*')
+    template = env.get_template('research_positions_new.sql.j2')
+    query = template.render(
+        date_from=date_from.strftime('%Y-%m-%d'),
+        date_to=date_to.strftime('%Y-%m-%d'),
+        source=f'{args.source_table}*',
+        static_sunrise=f'{args.sunrise_table}')
 
 
     client = bigquery.Client(project='world-fishing-827')
@@ -86,7 +148,7 @@ def run_research_positions(arguments):
     destination_table = args.destination_table.split('.')
     destination_dataset_ref = bigquery.DatasetReference(client.project, destination_table[0])
     destination_table_ref = destination_dataset_ref.table(destination_table[1])
-    create_table_if_not_exists(client, destination_table_ref)
+    create_table_if_not_exists2(client, destination_table_ref)
     delete_partition(client, args.destination_table, date_from.strftime('%Y-%m-%d'), date_to.strftime('%Y-%m-%d'))
 
     # Run query to calc how much bytes will spend
