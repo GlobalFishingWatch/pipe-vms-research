@@ -44,7 +44,7 @@ def create_table_if_not_exists(client, destination_table_ref):
             type_ = bigquery.TimePartitioningType.MONTH,
             field = "timestamp",  # name of column to use for partitioning
         )
-        table.clustering_fields = ["timestamp", "ssvid"]
+        table.clustering_fields = ["timestamp"]
         table = client.create_table(table)
 
 
