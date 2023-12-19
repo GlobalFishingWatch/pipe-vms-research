@@ -25,6 +25,7 @@ def create_table_if_not_exists(client, destination_table_ref):
         table = client.get_table(destination_table_ref) #API request
     except NotFound:
         schema = [
+            bigquery.SchemaField('msgid', 'STRING', description='A unique message id to be use to join to posterior pipeline output tables.'),
             bigquery.SchemaField('lat', 'FLOAT', description='The latitude where the vessel was positioned.'),
             bigquery.SchemaField('lon', 'FLOAT', description='The longitude where the vessel was positioned.'),
             bigquery.SchemaField('speed', 'FLOAT', description='The speed of the vessel.'),
@@ -37,7 +38,8 @@ def create_table_if_not_exists(client, destination_table_ref):
             bigquery.SchemaField('distance_from_port_m', 'FLOAT', description='The distance from port.'),
             bigquery.SchemaField('distance_from_shore_m', 'FLOAT', description='The distance from shore.'),
             bigquery.SchemaField('elevation_m', 'FLOAT', description='The elevation.'),
-            bigquery.SchemaField('source', 'STRING', description='The source which the message belongs.')
+            bigquery.SchemaField('source', 'STRING', description='The source which the message belongs.'),
+            bigquery.SchemaField('meters_to_prev', 'FLOAT', description='Distance (meters) to the previous point in the segment.')
         ]
         table = bigquery.Table(destination_table_ref, schema=schema)
         table.time_partitioning = bigquery.TimePartitioning(
