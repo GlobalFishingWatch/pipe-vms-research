@@ -25,6 +25,7 @@ def create_table_if_not_exists(client, destination_table_ref):
         table = client.get_table(destination_table_ref) #API request
     except NotFound:
         schema = [
+            bigquery.SchemaField('msgid', 'STRING', description='A unique message id to be use to join to posterior pipeline output tables.'),
             bigquery.SchemaField('lat', 'FLOAT', description='The latitude where the vessel was positioned.'),
             bigquery.SchemaField('lon', 'FLOAT', description='The longitude where the vessel was positioned.'),
             bigquery.SchemaField('speed', 'FLOAT', description='The speed of the vessel.'),
