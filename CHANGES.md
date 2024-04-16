@@ -8,6 +8,12 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 
 ## [Unreleased]
 
+## v4.1.0 - 2024-04-16
+
+### Added
+
+* [PIPELINE-1871](https://globalfishingwatch.atlassian.net/browse/PIPELINE-1871): Use 
+  new research query to generate vms research positions.
 
 ## v3.0.2 - 2021-11-19
 
