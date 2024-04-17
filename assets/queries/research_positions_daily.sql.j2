@@ -2,32 +2,34 @@
 ---------------------------------------------------------------
 -- User defined JS helper functions
 ---------------------------------------------------------------
-CREATE TEMP FUNCTION date_from() AS (DATE('{{ date_from }}'));
-CREATE TEMP FUNCTION date_to() AS (DATE('{{ date_to }}'));
-CREATE TEMP FUNCTION one_day_before(d DATE) AS (DATE_SUB(d, INTERVAL 1 DAY));
--- #
--- # Define some utility functions to make thinks more readable
+--
+CREATE TEMP FUNCTION toDAY() AS (DATE('{{ date }}'));
+--
+CREATE TEMP FUNCTION yesterDAY() AS (DATE_SUB(toDAY(), INTERVAL 1 DAY));
+--
+-- Define some utility functions to make thinks more readable
 CREATE TEMP FUNCTION YYYYMMDD(d DATE) AS (
-  -- # Format a date as YYYYMMDD
-  -- # e.g. DATE('2018-01-01') => '20180101'
-  FORMAT_DATE('%Y%m%d', d) );
-
+  -- Format a date as YYYYMMDD
+  -- e.g. DATE('2018-01-01') => '20180101'
+  FORMAT_DATE('%Y%m%d',
+    d) );
+--
 CREATE TEMP FUNCTION distance_m(lat1 FLOAT64,
   lon1 FLOAT64,
   lat2 FLOAT64,
   lon2 FLOAT64) AS (
-  -- # Return the distance between two lat/lon locations in meters
-  -- # if any of the parameters are null, returns null
-  -- # if the distance is less than .0001 degrees, returns 0
+  -- Return the distance between two lat/lon locations in meters
+  -- if any of the parameters are null, returns null
+  -- if the distance is less than .0001 degrees, returns 0
   IF ( (ABS(lat2 - lat1) < .0001
       AND ABS(lon2- lon1) < .0001 ), 0.0, ACOS( COS(0.01745329251 * (90 - lat1)) * COS(0.01745329251 * (90 - lat2)) + SIN(0.01745329251 * (90 - lat1)) * SIN(0.01745329251 * (90 - lat2)) * COS(0.01745329251 * (lon2 - lon1)) ) * 6371000 ) );
-
+--
   CREATE TEMP FUNCTION hours_diff_ABS(timestamp1 TIMESTAMP,
   timestamp2 TIMESTAMP) AS (
-  -- #
-  -- # Return the absolute value of the diff between the two timestamps in hours with microsecond precision
-  -- # If either parameter is null, return null
-  -- #
+  --
+  -- Return the absolute value of the diff between the two timestamps in hours with microsecond precision
+  -- If either parameter is null, return null
+  --
   ABS(TIMESTAMP_DIFF(timestamp1,
       timestamp2,
       microsecond) / 3600000000.0) );
@@ -35,9 +37,9 @@ CREATE TEMP FUNCTION distance_m(lat1 FLOAT64,
 -- Query
 ---------------------------------------------------------------
 WITH
--- #
--- # Gets position messages for the target date
--- #
+--
+-- Gets position messages for the target date
+--
   raw_message AS (
     SELECT
       msgid,
@@ -61,14 +63,30 @@ WITH
       regions
     FROM
      `{{ source }}`
-    WHERE _TABLE_SUFFIX BETWEEN YYYYMMDD( one_day_before(date_from()) ) AND YYYYMMDD(date_to())
-      # only valid positions
+    WHERE _TABLE_SUFFIX = YYYYMMDD( toDAY() )
+      -- only valid positions
       AND abs(lat) < 90
       AND abs(lon) < 180
   ),
--- #
--- # Loads sunrise lookup table
--- #
+--
+-- Gets positions from yesterday
+--
+  positions_yesterday AS (
+    SELECT
+      msgid,
+      timestamp,
+      seg_id,
+      lat,
+      lon
+    FROM
+     `{{ source }}`
+      WHERE _TABLE_SUFFIX = YYYYMMDD( yesterDAY() )
+      AND abs(lat) < 90
+      AND abs(lon) < 180
+  ),
+--
+-- Loads sunrise lookup table
+--
   sunrise_lookup AS (
     SELECT
       lat,
@@ -80,12 +98,12 @@ WITH
       lat,
       day
   ),
--- # Eliminates duplicate messages with the same msg_id, but only if lat,lon is nearly identical. Not
--- # certain this is necessary for VMS, but eliminating any duplicate msgids that may occur remains
--- # important.
--- # NB: the window function is ordered by timestamp lat and lon to make the ordering deterministic
--- # so if there are different lat/lon in the same second with the same msg_id, we will always get the
--- # the same record
+-- Eliminates duplicate messages with the same msg_id, but only if lat,lon is nearly identical. Not
+-- certain this is necessary for VMS, but eliminating any duplicate msgids that may occur remains
+-- important.
+-- NB: the window function is ordered by timestamp lat and lon to make the ordering deterministic
+-- so if there are different lat/lon in the same second with the same msg_id, we will always get the
+-- the same record
   dedup_message AS (
     SELECT
       * EXCEPT (row_number)
@@ -102,10 +120,10 @@ WITH
         raw_message )
     WHERE row_number = 1
   ),
--- # Combines all positions and timestamps from yesterday and today
--- # no need to dedup yesterday because we will throw them away later
--- # NB: we drop a bunch of fields that we don't need here so that we don't have to also
--- # have those fields read from yesterday. We will add them back in at the end
+-- Combines all positions and timestamps from yesterday and today
+-- no need to dedup yesterday because we will throw them away later
+-- NB: we drop a bunch of fields that we don't need here so that we don't have to also
+-- have those fields read from yesterday. We will add them back in at the end
   all_positions AS (
     SELECT
       msgid,
@@ -114,11 +132,15 @@ WITH
       lat,
       lon
     FROM
-      dedup_message 
+      dedup_message UNION ALL
+    SELECT
+      *
+    FROM
+      positions_yesterday
   ),
--- #
--- # Gets previous position and timestamp
--- # NB: This is why we need data from yesterday.
+--
+-- Gets previous position and timestamp
+-- NB: This is why we need data from yesterday.
   prev_position AS (
     SELECT
       *,
@@ -128,10 +150,10 @@ WITH
     FROM
       all_positions
   ),
-  -- #
-  -- # Computes distance and time to previous position, and derive implied speed
-  -- # We no longer need yesterday, so filter those out
-  -- #
+  --
+  -- Computes distance and time to previous position, and derive implied speed
+  -- We no longer need yesterday, so filter those out
+  --
   prev_time_dist AS (
     SELECT
       *,
@@ -143,11 +165,11 @@ WITH
           prev_timestamp), 0) hours
     FROM
       prev_position
-    WHERE DATE(timestamp) != one_day_before(date_from())
+    WHERE DATE(timestamp) = toDAY()
   ),
--- #
--- # Computes average distance and implied speed in knots
--- #
+--
+-- Computes average distance and implied speed in knots
+--
   implied_speed AS (
     SELECT
       *,
@@ -156,9 +178,9 @@ WITH
     FROM
       prev_time_dist
   ),
--- #
--- # Computes day of year and local time
--- #
+--
+-- Computes day of year and local time
+--
   day_and_time AS (
     SELECT
       *,
@@ -174,9 +196,9 @@ WITH
     FROM
       implied_speed
   ),
--- #
--- # Determines local sunrise and sunset for each position message
--- #
+--
+-- Determines local sunrise and sunset for each position message
+--
   local_sunrise AS (
     SELECT
       message.*,
@@ -191,9 +213,9 @@ WITH
       message.day_of_year = sunrise_lookup.day
       AND message.lat_bin = sunrise_lookup.lat
   ),
--- #
--- # Adds a boolean to indicate whether is it night for each position
--- #
+--
+-- Adds a boolean to indicate whether is it night for each position
+--
   local_night AS (
     SELECT
       *,
@@ -202,10 +224,10 @@ WITH
     FROM
       local_sunrise
   ),
--- #
--- # Now we need to add back in the other message fields that we left behind when we combined positions
--- # from yesterday
--- #
+--
+-- Now we need to add back in the other message fields that we left behind when we combined positions
+-- from yesterday
+--
   combined_message AS (
     SELECT
       dedup_message.*,
@@ -220,9 +242,9 @@ WITH
         lat,
         lon)
   )
--- #
--- # Actually run the entire pipeline
--- #
+--
+-- Actually run the entire pipeline
+--
 SELECT
   msgid,
   ssvid,
@@ -244,6 +266,6 @@ SELECT
   elevation_m,
   distance_from_shore_m,
   distance_from_port_m,
-  regions,
+  regions
 FROM
   combined_message
