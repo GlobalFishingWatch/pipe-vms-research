@@ -8,6 +8,7 @@ This script will do:
 """
 
 from datetime import datetime, timedelta
+from enum import Enum
 import os
 import sys
 from jinja2 import Environment, FileSystemLoader
@@ -34,7 +35,21 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
-    
+
+class RunMode(Enum):
+    daily = 1
+    batch = 2
+
+    def __str__(self):
+        return self.name
+
+    @staticmethod
+    def from_string(s):
+        try:
+            return RunMode[s]
+        except KeyError:
+            raise ValueError()
+
 def run_research_positions(arguments):
     parser = argparse.ArgumentParser(description='Generates the research summarized tables.')
     parser.add_argument('-i','--source_table', help='The BQ source table  (Format str, ex: project:dataset.table)', required=True)
@@ -46,6 +61,15 @@ def run_research_positions(arguments):
     parser.add_argument('-dry', '--dry_run', type=str2bool, nargs='?',
                         const=True, default=False,
                         help="Estimates the query execution cost without executing it.")
+    parser.add_argument('-mode', '--mode', type=RunMode.from_string,
+                        choices=list(RunMode),  default='batch',
+                        required=True,
+                        help="Execution mode: [ " +
+                        "*'batch' Runs a single query for the entire period (default), " + \
+                        "* 'daily' Runs one query per day in the period" + \
+                        "]")
+
+
     args = parser.parse_args(arguments)
 
     start_time = time.time()
@@ -59,32 +83,32 @@ def run_research_positions(arguments):
 
     # Apply template
     env = Environment(loader=FileSystemLoader('./assets/queries/'))
-    template = env.get_template('research_positions_daily.sql.j2')
 
     destination_project, destination_ds_tl = args.destination_table.split(':')
     destination_table=args.destination_table.replace(':','.')
     source=f'{args.source_table}*'.replace(':','.')
     sunrise_dataset_table=args.sunrise_dataset_table.replace(':','.')
     dry_run = args.dry_run
+    execution_mode = args.mode
 
     # when project is not set in the enviroment use the destination table project
-    if not os.environ['GOOGLE_CLOUD_PROJECT']:
+    if not os.environ.get('GOOGLE_CLOUD_PROJECT'):
         os.environ['GOOGLE_CLOUD_PROJECT']=destination_project
 
     labels=args.labels
 
     bq_tools = BQTools()
     bq_tools.bq_client.project = destination_project
+    description = f"""
+        Created by pipe-vms-research: {get_pipe_ver()}.
+        * Research positions generator process table
+        * https://github.com/GlobalFishingWatch/pipe-vms-research
+        * Source: {source}
+        * Sunrise Table: {sunrise_dataset_table}
+        * Date: {date_from.strftime('%Y-%m-%d')},{date_to.strftime('%Y-%m-%d')}
+    """
     if not dry_run:
         logger.info(f'Creates the research daily table <{args.destination_table}> if it does not exists')
-        description = f"""
-            Created by pipe-vms-research: {get_pipe_ver()}.
-            * Research positions generator process table
-            * https://github.com/GlobalFishingWatch/pipe-vms-research
-            * Source: {source}
-            * Sunrise Table: {sunrise_dataset_table}
-            * Date: {date_from.strftime('%Y-%m-%d')},{date_to.strftime('%Y-%m-%d')}
-        """
         schema = bq_tools.schema_json2builder('./assets/schemas/research_positions_schema.json')
         bq_tools.create_tables_if_not_exists(destination_table=destination_ds_tl,
                                              date_from=date_from,
@@ -97,9 +121,28 @@ def run_research_positions(arguments):
 
     total_cost = 0
     try:
-        for date_x in daterange(date_from, date_to):
+        if execution_mode == RunMode.daily:
+            template = env.get_template('research_positions_daily.sql.j2')
+            for date_x in daterange(date_from, date_to):
+                query = template.render({
+                    'date': date_x.strftime('%Y-%m-%d'),
+                    'source': source,
+                    'static_sunrise_dataset_and_table': sunrise_dataset_table,
+                })
+                # Run query to calc how much bytes will spend
+                query_job=bq_tools.run_estimation_query(query, destination_table, labels)
+                # Run query and calc research positions
+                if dry_run:
+                    total_cost=total_cost+query_job.total_bytes_processed
+                else:
+                    query_job=bq_tools.run_query(query, destination_table, labels)
+                    total_cost=total_cost+query_job.total_bytes_processed
+
+        elif execution_mode == RunMode.batch:
+            template = env.get_template('research_positions_batch.sql.j2')
             query = template.render({
-                'date': date_x.strftime('%Y-%m-%d'),
+                'date_from': date_from.strftime('%Y-%m-%d'),
+                'date_to': date_to.strftime('%Y-%m-%d'),
                 'source': source,
                 'static_sunrise_dataset_and_table': sunrise_dataset_table,
             })
@@ -116,6 +159,8 @@ def run_research_positions(arguments):
         logger.error(f'Unrecongnized error: {err}.')
         sys.exit(1)
 
+    if not dry_run:
+        bq_tools.update_table_descr(destination_ds_tl, description)
 
     ### ALL DONE
     if dry_run:
