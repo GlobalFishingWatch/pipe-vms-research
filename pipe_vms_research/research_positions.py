@@ -67,7 +67,9 @@ def run_research_positions(arguments):
     sunrise_dataset_table=args.sunrise_dataset_table.replace(':','.')
     dry_run = args.dry_run
 
-    os.environ['GOOGLE_CLOUD_PROJECT']=destination_project
+    # when project is not set in the enviroment use the destination table project
+    if not os.environ['GOOGLE_CLOUD_PROJECT']:
+        os.environ['GOOGLE_CLOUD_PROJECT']=destination_project
 
     labels=args.labels
 
