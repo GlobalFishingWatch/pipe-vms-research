@@ -37,10 +37,10 @@ def str2bool(v):
     
 def run_research_positions(arguments):
     parser = argparse.ArgumentParser(description='Generates the research summarized tables.')
-    parser.add_argument('-i','--source_table', help='The BQ source table (Format str, ex: datset.table).', required=True)
-    parser.add_argument('-o','--destination_table', help='The BQ destination table (Format str, ex: datset.table).', required=True)
+    parser.add_argument('-i','--source_table', help='The BQ source table  (Format str, ex: project:dataset.table)', required=True)
+    parser.add_argument('-o','--destination_table', help='The BQ destination table  (Format str, ex: project:dataset.table).', required=True)
     parser.add_argument('-dr','--date_range', help='The date range to be processed (Format str YYYY-MM-DD[,YYYY-MM-DD]).', required=True)
-    parser.add_argument('-sd', '--sunrise_dataset_table', help='The BQ table used as static sunrise.', required=False, 
+    parser.add_argument('-sd', '--sunrise_dataset_table', help='The BQ table used as static sunrise  (Format str, ex: project:dataset.table).', required=False, 
                         default='world-fishing-827.pipe_static.sunrise')
     parser.add_argument('-labels','--labels', help='Adds a labels to a table (Format: json).', required=True, type=json.loads)
     parser.add_argument('-dry', '--dry_run', type=str2bool, nargs='?',
