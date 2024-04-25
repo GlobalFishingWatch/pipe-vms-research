@@ -170,11 +170,7 @@ class BQTools:
             logger.error(f'update_table_descr - Unrecongnized error: {err}.')
             sys.exit(1)
 
-    def run_estimation_query(self, query, destination, labels, is_partitioned:bool=True):
-        return self.run_query(query, destination, labels, True, is_partitioned)
-
-    def run_query(self, query, destination, labels, estimate=False, is_partitioned:bool=True):
-    # def run_query(self, query, destination, labels, estimate=False):
+    def run_query(self, query, destination, labels,  is_partitioned:bool=True):
         """Runs the query using the client.
 
         :param query: The query.
@@ -187,7 +183,7 @@ class BQTools:
         :type estimate: bool.
         """
         job_config = bigquery.QueryJobConfig(
-            dry_run=estimate,
+            dry_run=False,
             use_query_cache=False,
             priority=bigquery.QueryPriority.BATCH,
             use_legacy_sql=False,
@@ -196,16 +192,11 @@ class BQTools:
             labels=labels,
         )
 
-        logger.info(f'Execute {("estimate" if estimate else "real")} BATCH query, destination {destination}')
-        if not estimate:
-            logger.info(f'=====QUERY STARTS======\n{query}\n====QUERY ENDS====')
+        logger.info(f'Execute real BATCH query, destination {destination}')
         try:
             query_job = self.bq_client.query(query, job_config=job_config)  # Make an API request.
             logger.info(f'Job {query_job.job_id} is currently in state {query_job.state}')
-            if estimate:
-                logger.info(f'Estimation: This query will process {query_job.total_bytes_processed} bytes ({query_job.total_bytes_processed/pow(1024,3)} GB).')
-            else:
-                query_job.result() # Wait for the job to complete.
+            query_job.result() # Wait for the job to complete.
             return query_job
 
         except Exception as err:
