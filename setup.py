@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name='pipe-vms-research',
-    version='4.0.0',
+    version='4.1.0',
     packages=find_packages(exclude=['test*.*', 'tests']),
     include_package_data=True
 )

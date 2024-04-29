@@ -8,63 +8,41 @@ This script will do:
 """
 
 from datetime import datetime, timedelta
+from enum import Enum
+import os
+import sys
 from jinja2 import Environment, FileSystemLoader
-from google.cloud import bigquery
-from google.cloud.exceptions import NotFound
-import argparse, time
+import json
+import argparse, time, logging
 
-def create_table_if_not_exists(client, destination_table_ref):
-    """Creates table if it does not exists
+from pipe_vms_research.utils.bqtools import BQTools
+from pipe_vms_research.utils.ver import get_pipe_ver
 
-    :param client: Client of BQ.
-    :type client: BigQuery.Client
-    :param destination_table_ref: Reference of a Table in BQ.
-    :type destination_table_ref: BigQuery.TableReference
-    """
-    try:
-        table = client.get_table(destination_table_ref) #API request
-    except NotFound:
-        schema = [
-            bigquery.SchemaField('msgid', 'STRING', description='A unique message id to be use to join to posterior pipeline output tables.'),
-            bigquery.SchemaField('lat', 'FLOAT', description='The latitude where the vessel was positioned.'),
-            bigquery.SchemaField('lon', 'FLOAT', description='The longitude where the vessel was positioned.'),
-            bigquery.SchemaField('speed', 'FLOAT', description='The speed of the vessel.'),
-            bigquery.SchemaField('course', 'FLOAT', description='The course of the vessel.'),
-            bigquery.SchemaField('timestamp', 'TIMESTAMP', description='The moment when was capture the position.'),
-            bigquery.SchemaField('hours', 'FLOAT', description='The fishing hours.'),
-            bigquery.SchemaField('nnet_score', 'FLOAT', description='The score of neural network to indicate that was fishing.'),
-            bigquery.SchemaField('seg_id', 'STRING', description='The segment identification.'),
-            bigquery.SchemaField('ssvid', 'STRING', description='The ssvid.'),
-            bigquery.SchemaField('distance_from_port_m', 'FLOAT', description='The distance from port.'),
-            bigquery.SchemaField('distance_from_shore_m', 'FLOAT', description='The distance from shore.'),
-            bigquery.SchemaField('elevation_m', 'FLOAT', description='The elevation.'),
-            bigquery.SchemaField('source', 'STRING', description='The source which the message belongs.'),
-            bigquery.SchemaField('meters_to_prev', 'FLOAT', description='Distance (meters) to the previous point in the segment.')
-        ]
-        table = bigquery.Table(destination_table_ref, schema=schema)
-        table.time_partitioning = bigquery.TimePartitioning(
-            type_ = bigquery.TimePartitioningType.MONTH,
-            field = "timestamp",  # name of column to use for partitioning
-        )
-        table.clustering_fields = ["timestamp"]
-        table = client.create_table(table)
+logger = logging.getLogger()
 
+def daterange(start_date, end_date):
+    for n in range(int((end_date - start_date).days)+1):
+        yield start_date + timedelta(n)
 
-
-def delete_partition(client, destination_table, date_from, date_to):
-    query_job = client.query(f"""
-        DELETE FROM `{ destination_table }`
-        WHERE DATE(timestamp) >= '{ date_from }' AND DATE(timestamp) < '{ date_to }'
-     """, bigquery.QueryJobConfig(use_query_cache=False,use_legacy_sql=False))
-    result = query_job.result()
-    print(f'delete_partition result: {result}')
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def run_research_positions(arguments):
     parser = argparse.ArgumentParser(description='Generates the research summarized tables.')
-    parser.add_argument('-i','--source_table', help='The BQ source table (Format str, ex: datset.table).', required=True)
-    parser.add_argument('-o','--destination_table', help='The BQ destination table (Format str, ex: datset.table).', required=True)
+    parser.add_argument('-i','--source_table', help='The BQ source table  (Format str, ex: project:dataset.table)', required=True)
+    parser.add_argument('-o','--destination_table', help='The BQ destination table  (Format str, ex: project:dataset.table).', required=True)
     parser.add_argument('-dr','--date_range', help='The date range to be processed (Format str YYYY-MM-DD[,YYYY-MM-DD]).', required=True)
+    parser.add_argument('-sd', '--sunrise_dataset_table', help='The BQ table used as static sunrise  (Format str, ex: project:dataset.table).', required=False, 
+                        default='world-fishing-827.pipe_static.sunrise')
+    parser.add_argument('-labels','--labels', help='Adds a labels to a table (Format: json).', required=True, type=json.loads)
 
     args = parser.parse_args(arguments)
 
@@ -79,46 +57,56 @@ def run_research_positions(arguments):
 
     # Apply template
     env = Environment(loader=FileSystemLoader('./assets/queries/'))
-    template = env.get_template('research_positions_query.sql.j2')
-    query = template.render(date_from=date_from.strftime('%Y%m%d'), date_to=date_to.strftime('%Y%m%d'), source=f'{args.source_table}*')
+
+    destination_project, destination_ds_tl = args.destination_table.split(':')
+    destination_table=args.destination_table.replace(':','.')
+    source=f'{args.source_table}*'.replace(':','.')
+    sunrise_dataset_table=args.sunrise_dataset_table.replace(':','.')
+
+    labels=args.labels
+
+    bq_tools = BQTools()
+    # bq_tools.bq_client.project = destination_project
+    description = f"""
+        Created by pipe-vms-research: {get_pipe_ver()}.
+        * Research positions generator process table
+        * https://github.com/GlobalFishingWatch/pipe-vms-research
+        * Source: {source}
+        * Sunrise Table: {sunrise_dataset_table}
+        * Date: {date_from.strftime('%Y-%m-%d')},{date_to.strftime('%Y-%m-%d')}
+    """
+    logger.info(f'Creates the research daily table <{args.destination_table}> if it does not exists')
+    schema = bq_tools.schema_json2builder('./assets/schemas/research_positions_schema.json')
+    bq_tools.create_tables_if_not_exists(destination_table=destination_ds_tl,
+                                            date_from=date_from,
+                                            date_to=date_to,
+                                            labels=labels,
+                                            table_desc=description,
+                                            schema=schema,
+                                            clustering_fields=['ssvid'],
+                                            date_field='timestamp')
+
+    total_cost = 0
+    try:
+        template = env.get_template('research_positions.sql.j2')
+        query = template.render({
+            'date_from': date_from.strftime('%Y-%m-%d'),
+            'date_to': date_to.strftime('%Y-%m-%d'),
+            'source': source,
+            'static_sunrise_dataset_and_table': sunrise_dataset_table,
+        })
+        # Run query and calc research positions
+        query_job=bq_tools.run_query(query, destination_table, labels)
+        total_cost=total_cost+query_job.total_bytes_processed
+
+    except Exception as err:
+        logger.error(f'Unrecongnized error: {err}.')
+        sys.exit(1)
 
 
-    client = bigquery.Client(project='world-fishing-827')
-    #Creates partitioned table
-    destination_table = args.destination_table.split('.')
-    destination_dataset_ref = bigquery.DatasetReference(client.project, destination_table[0])
-    destination_table_ref = destination_dataset_ref.table(destination_table[1])
-    create_table_if_not_exists(client, destination_table_ref)
-    delete_partition(client, args.destination_table, date_from.strftime('%Y-%m-%d'), date_to.strftime('%Y-%m-%d'))
-
-    # Run query to calc how much bytes will spend
-    job_config = bigquery.QueryJobConfig(
-        dry_run=True,
-        use_query_cache=False,
-        priority=bigquery.QueryPriority.BATCH,
-        use_legacy_sql=False,
-        write_disposition='WRITE_TRUNCATE',
-        destination=f'{client.project}.{args.destination_table}'
-    )
-
-    query_job = client.query(query, job_config=job_config)  # Make an API request.
-    print(f'This query will process {query_job.total_bytes_processed} bytes.')
-
-    # Run query and calc research positions
-    job_config = bigquery.QueryJobConfig(
-        use_query_cache=False,
-        priority=bigquery.QueryPriority.BATCH,
-        use_legacy_sql=False,
-        write_disposition='WRITE_APPEND',
-        destination=f'{client.project}.{args.destination_table}'
-    )
-
-    query_job = client.query(query, job_config=job_config)  # Make an API request.
-    print(f'Job {query_job.job_id} is currently in state {query_job.state}')
-
-    query_job.result() # Wait for the job to complete.
-
+    bq_tools.update_table_descr(destination_ds_tl, description)
 
     ### ALL DONE
-    print(f'All done, you can find the output ({date_from.strftime("%Y%m%d")}-{date_to.strftime("%Y%m%d")}): {args.destination_table}')
-    print(f'Execution time {(time.time()-start_time)/60} minutes')
+    logger.info(f'All done, you can find the output ({date_from.strftime("%Y%m%d")}-{date_to.strftime("%Y%m%d")}): {destination_table}')
+    logger.info(f'Total execution cost: {total_cost/pow(1024,3):#.2f} GB')
+    logger.info(f'Execution time: {(time.time()-start_time)/60:#.2f} minutes')

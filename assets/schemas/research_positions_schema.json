@@ -1,0 +1,214 @@
+[
+  {
+    "name": "msgid",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "A unique message id to be use to join to posterior pipeline output tables."
+  },
+  {
+    "name": "ssvid",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "The ssvid."
+  },
+  {
+    "name": "seg_id",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "The segment identification."
+  },
+  {
+    "name": "timestamp",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "The moment when was capture the position."
+  },
+  {
+    "name": "lat",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The latitude where the vessel was positioned."
+  },
+  {
+    "name": "lon",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The longitude where the vessel was positioned."
+  },
+  {
+    "name": "source",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "The source which the message belongs."
+  },
+  {
+    "name": "speed_knots",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The speed of the vessel in knots."
+  },
+  {
+    "name": "heading",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The heading of the vessel."
+  },
+  {
+    "name": "course",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The course of the vessel."
+  },
+  {
+    "name": "meters_to_prev",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The distance (meters) to the previous point in the segment."
+  },
+  {
+    "name": "implied_speed_knots",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The implied speed of the vessel in knots."
+  },
+  {
+    "name": "hours",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The fishing hours."
+  },
+  {
+    "name": "night",
+    "type": "BOOL",
+    "mode": "NULLABLE",
+    "description": "true if the sun is below the horizon"
+  },
+  {
+    "name": "nnet_score",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The score of neural network to indicate that was fishing."
+  },
+  {
+    "name": "logistic_score",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The logistic score of the given position."
+  },
+  {
+    "name": "fishing_hours",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The fishing hours."
+  },
+  {
+    "name": "elevation_m",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The elevation."
+  },
+  {
+    "name": "distance_from_shore_m",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The distance from shore."
+  },
+  {
+    "name": "distance_from_port_m",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "The distance from port."
+  },
+  {
+    "name": "regions",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "regions",
+    "fields": [
+      {
+        "name": "mregion",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "mregion"
+      },
+      {
+        "name": "arg",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "arg"
+      },
+      {
+        "name": "eez",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "eez"
+      },
+      {
+        "name": "mparu",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "mparu"
+      },
+      {
+        "name": "vme",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "vme"
+      },
+      {
+        "name": "kkp",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "kkp"
+      },
+      {
+        "name": "ocean",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "ocean"
+      },
+      {
+        "name": "hsp",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "hsp"
+      },
+      {
+        "name": "other",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "other"
+      },
+      {
+        "name": "fao",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "fao"
+      },
+      {
+        "name": "mpant",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "mpant"
+      },
+      {
+        "name": "ames",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "ames"
+      },
+      {
+        "name": "rfmo",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "rfmo"
+      },
+      {
+        "name": "major_fao",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "major_fao"
+      }
+    ]
+  }
+]
