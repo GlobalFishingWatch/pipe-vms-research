@@ -8,6 +8,13 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 
 ## [Unreleased]
 
+## v4.1.1 - 2024-04-29
+
+### Added
+
+* [PIPELINE-1871](https://globalfishingwatch.atlassian.net/browse/PIPELINE-1871): Fix 
+  arguments to be backwards compatible
+
 ## v4.1.0 - 2024-04-16
 
 ### Added
