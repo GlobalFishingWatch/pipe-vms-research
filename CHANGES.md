@@ -12,8 +12,10 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 
 ### Added
 
-- [PIPELINE-1871](https://globalfishingwatch.atlassian.net/browse/PIPELINE-1229):
+- [PIPELINE-2229](https://globalfishingwatch.atlassian.net/browse/PIPELINE-2229):
   Removed logistic_score and regions field to meet pipe-features v4 output
+
+- Use alpine base image
 
 ## v4.1.1 - 2024-04-29
 
