@@ -48,7 +48,6 @@ WITH
       lat,
       lon,
       nnet_score,
-      logistic_score,
       speed AS speed_knots,
       course,
       heading,
@@ -58,7 +57,6 @@ WITH
       elevation_m,
       distance_from_shore_m,
       distance_from_port_m,
-      regions
     FROM
      `{{ source }}`
     WHERE _TABLE_SUFFIX BETWEEN YYYYMMDD( one_day_before(date_from()) ) AND YYYYMMDD(date_to())
@@ -239,11 +237,9 @@ SELECT
   hours,
   night,
   nnet_score,
-  logistic_score,
   IF (nnet_score > 0.5, hours, 0) AS fishing_hours,
   elevation_m,
   distance_from_shore_m,
   distance_from_port_m,
-  regions,
 FROM
   combined_message

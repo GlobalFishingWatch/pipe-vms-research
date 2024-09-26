@@ -90,12 +90,6 @@
     "description": "The score of neural network to indicate that was fishing."
   },
   {
-    "name": "logistic_score",
-    "type": "FLOAT",
-    "mode": "NULLABLE",
-    "description": "The logistic score of the given position."
-  },
-  {
     "name": "fishing_hours",
     "type": "FLOAT",
     "mode": "NULLABLE",
@@ -118,97 +112,5 @@
     "type": "FLOAT",
     "mode": "NULLABLE",
     "description": "The distance from port."
-  },
-  {
-    "name": "regions",
-    "type": "RECORD",
-    "mode": "NULLABLE",
-    "description": "regions",
-    "fields": [
-      {
-        "name": "mregion",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "mregion"
-      },
-      {
-        "name": "arg",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "arg"
-      },
-      {
-        "name": "eez",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "eez"
-      },
-      {
-        "name": "mparu",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "mparu"
-      },
-      {
-        "name": "vme",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "vme"
-      },
-      {
-        "name": "kkp",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "kkp"
-      },
-      {
-        "name": "ocean",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "ocean"
-      },
-      {
-        "name": "hsp",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "hsp"
-      },
-      {
-        "name": "other",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "other"
-      },
-      {
-        "name": "fao",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "fao"
-      },
-      {
-        "name": "mpant",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "mpant"
-      },
-      {
-        "name": "ames",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "ames"
-      },
-      {
-        "name": "rfmo",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "rfmo"
-      },
-      {
-        "name": "major_fao",
-        "type": "STRING",
-        "mode": "REPEATED",
-        "description": "major_fao"
-      }
-    ]
   }
 ]
