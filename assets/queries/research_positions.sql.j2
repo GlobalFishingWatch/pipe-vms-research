@@ -102,7 +102,7 @@ WITH
         raw_message )
     WHERE row_number = 1
   ),
--- # Combines all positions and timestamps from yesterday and today
+-- # Picking all fields needed for positions and timestamps from yesterday and today
 -- # no need to dedup yesterday because we will throw them away later
 -- # NB: we drop a bunch of fields that we don't need here so that we don't have to also
 -- # have those fields read from yesterday. We will add them back in at the end
@@ -135,12 +135,12 @@ WITH
   prev_time_dist AS (
     SELECT
       *,
-      IFNULL (distance_m (prev_lat,
+      distance_m (prev_lat,
           prev_lon,
           lat,
-          lon), 0) meters_to_prev,
-      IFNULL (hours_diff_abs (timestamp,
-          prev_timestamp), 0) hours
+          lon) meters_to_prev,
+      hours_diff_abs (timestamp,
+          prev_timestamp) hours
     FROM
       prev_position
     WHERE DATE(timestamp) != one_day_before(date_from())
