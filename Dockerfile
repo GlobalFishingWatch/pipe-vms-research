@@ -1,4 +1,4 @@
-FROM gcr.io/world-fishing-827/github.com/globalfishingwatch/gfw-pipeline:latest-python3.8
+FROM gcr.io/world-fishing-827/github.com/globalfishingwatch/gfw-pipeline:latest-python3.8-alpine
 
 # Setup local application dependencies
 COPY ./requirements.txt ./
