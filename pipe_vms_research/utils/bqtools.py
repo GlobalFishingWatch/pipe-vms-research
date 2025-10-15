@@ -16,7 +16,7 @@ logger = logging.getLogger()
 
 def validate_bq_table(input_string):
     # Define the regex pattern for validation
-    pattern = r'^([^:]+:)?([^:\.]+\.[^:\.]+)$'
+    pattern = r'^([^:\.]+[:\.])?([^:\.]+\.[^:\.]+)$'
 
     # Perform regex matching
     match = re.match(pattern, input_string)

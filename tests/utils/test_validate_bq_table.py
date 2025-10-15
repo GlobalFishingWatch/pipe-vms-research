@@ -9,6 +9,11 @@ class TestValidateBigQueryTable(unittest.TestCase):
         input_string = 'my_project:my_dataset.my_table'
         expected_output = ('my_project', 'my_dataset', 'my_table')
         self.assertEqual(validate_bq_table(input_string), expected_output)
+
+    def test_valid_input_with_project_id_point_separator(self):
+        input_string = 'my_project.my_dataset.my_table'
+        expected_output = ('my_project', 'my_dataset', 'my_table')
+        self.assertEqual(validate_bq_table(input_string), expected_output)
     
     def test_valid_input_without_project_id(self):
         input_string = 'my_dataset.my_table'
