@@ -11,6 +11,9 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 ## v4.2.0 - 2025-10-15
 
 - [PIPELINE-3114](https://globalfishingwatch.atlassian.net/browse/PIPELINE-3114):
+  Allow passing executor project id to use in in the bq client
+
+- [PIPELINE-3114](https://globalfishingwatch.atlassian.net/browse/PIPELINE-3114):
   Accept fully qualified bq table name with dot separator
 
 
