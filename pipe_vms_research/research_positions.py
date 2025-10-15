@@ -7,17 +7,23 @@ This script will do:
 3- Run the query and save results in destination table.
 """
 
-from datetime import datetime, timedelta
-from jinja2 import Environment, FileSystemLoader
-import json
 import argparse
-import time
+import json
 import logging
+import time
+from datetime import datetime, timedelta
+
+from jinja2 import Environment, FileSystemLoader
 
 from pipe_vms_research.utils.bqtools import BQTools, validate_bq_table
 from pipe_vms_research.utils.ver import get_pipe_ver
 
 logger = logging.getLogger()
+
+BQ_TABLE_HELP = 'Format str, ex: [project:|.]dataset.table'
+DATERANGE_HELP = (
+    'The date range to be processed (Format str YYYY-MM-DD[,YYYY-MM-DD])'
+)
 
 
 def daterange(start_date, end_date):
@@ -28,16 +34,31 @@ def daterange(start_date, end_date):
 def run_research_positions(arguments):
     parser = argparse.ArgumentParser(
         description='Generates the research summarized tables.')
-    parser.add_argument('-i', '--source_table', help='The BQ source table  (Format str, ex: [project:]dataset.table)', required=True, type=validate_bq_table)
-    parser.add_argument('-o', '--destination_table',
-                        help='The BQ destination table  (Format str, ex: [project:]dataset.table).', required=True, type=validate_bq_table)
-    parser.add_argument('-dr', '--date_range',
-                        help='The date range to be processed (Format str YYYY-MM-DD[,YYYY-MM-DD]).', required=True)
-    parser.add_argument('-sd', '--sunrise_dataset_table', help='The BQ table used as static sunrise  (Format str, ex: [project:]dataset.table)).', required=False,
+    parser.add_argument('-i',
+                        '--source_table',
+                        help=f'The BQ source table  ({BQ_TABLE_HELP})',
+                        required=True,
+                        type=validate_bq_table)
+    parser.add_argument('-o',
+                        '--destination_table',
+                        help=f'The BQ destination table  ({BQ_TABLE_HELP}).',
+                        required=True,
+                        type=validate_bq_table)
+    parser.add_argument('-dr',
+                        '--date_range',
+                        help=DATERANGE_HELP,
+                        required=True)
+    parser.add_argument('-sd',
+                        '--sunrise_dataset_table',
+                        help=f'The BQ static sunrise table ({BQ_TABLE_HELP}).',
+                        required=False,
                         default='world-fishing-827:pipe_static.sunrise',
                         type=validate_bq_table)
-    parser.add_argument('-labels', '--labels',
-                        help='Adds a labels to a table (Format: json).', required=True, type=json.loads)
+    parser.add_argument('-labels',
+                        '--labels',
+                        help='Adds a labels to a table (Format: json).',
+                        required=True,
+                        type=json.loads)
 
     args = parser.parse_args(arguments)
 
@@ -55,18 +76,33 @@ def run_research_positions(arguments):
 
     bq_tools = BQTools()
 
-    (destination_project, destination_ds, destination_tl) = args.destination_table
+    (destination_project,
+     destination_ds,
+     destination_tl) = args.destination_table
     destination_ds_tl = f'{destination_ds}.{destination_tl}'
-    destination_table = f'{destination_project or bq_tools.bq_client.project}.{destination_ds}.{destination_tl}'
+    destination_table = (
+        f'{destination_project or bq_tools.bq_client.project}'
+        f'.{destination_ds}.{destination_tl}'
+    )
 
     (source_project, source_ds, source_tl) = args.source_table
-    source = f'{source_project or bq_tools.bq_client.project}.{source_ds}.{source_tl}*'
+    source = (
+        f'{source_project or bq_tools.bq_client.project}'
+        f'.{source_ds}.{source_tl}*'
+    )
 
-    (sunrise_dataset_project, sunrise_dataset_ds, sunrise_dataset_tl) = args.sunrise_dataset_table
-    sunrise_dataset_table = f'{sunrise_dataset_project or bq_tools.bq_client.project}.{sunrise_dataset_ds}.{sunrise_dataset_tl}'
+    (sunrise_dataset_project,
+     sunrise_dataset_ds,
+     sunrise_dataset_tl) = args.sunrise_dataset_table
+    sunrise_dataset_table = (
+        f'{sunrise_dataset_project or bq_tools.bq_client.project}'
+        f'.{sunrise_dataset_ds}.{sunrise_dataset_tl}'
+    )
 
     # override destination project if provided
-    bq_tools.bq_client.project = destination_project or bq_tools.bq_client.project
+    bq_tools.bq_client.project = (
+        destination_project or bq_tools.bq_client.project
+    )
 
     labels = args.labels
 
@@ -79,7 +115,8 @@ def run_research_positions(arguments):
         * Date: {date_from.strftime('%Y-%m-%d')},{date_to.strftime('%Y-%m-%d')}
     """
     logger.info(
-        f'Creates the research daily table <{args.destination_table}> if it does not exists')
+        f'Creates the research daily table <{args.destination_table}>'
+        ' if it does not exists')
     schema = bq_tools.schema_json2builder(
         './assets/schemas/research_positions_schema.json')
     bq_tools.create_tables_if_not_exists(destination_table=destination_ds_tl,
@@ -91,7 +128,7 @@ def run_research_positions(arguments):
                                          clustering_fields=['ssvid'],
                                          date_field='timestamp')
 
-    logger.info(f'Run query to populate research positions')
+    logger.info('Run query to populate research positions')
     total_cost = 0
     template = env.get_template('research_positions.sql.j2')
     query = template.render({
@@ -104,11 +141,11 @@ def run_research_positions(arguments):
     query_job = bq_tools.run_query(query, destination_table, labels)
     total_cost = total_cost+query_job.total_bytes_processed
 
-
     bq_tools.update_table_descr(destination_ds_tl, description)
 
     # ALL DONE
     logger.info(
-        f'All done, you can find the output ({date_from.strftime("%Y%m%d")}-{date_to.strftime("%Y%m%d")}): {destination_table}')
-    logger.info(f'Total execution cost: {total_cost/pow(1024,3):#.2f} GB')
+        f'All done, you can find the output ({date_from.strftime("%Y%m%d")}-'
+        f'{date_to.strftime("%Y%m%d")}): {destination_table}')
+    logger.info(f'Total execution cost: {total_cost/pow(1024, 3):#.2f} GB')
     logger.info(f'Execution time: {(time.time()-start_time)/60:#.2f} minutes')
