@@ -1,0 +1,6 @@
+{
+  "python-envs.pythonProjects": [],
+  "editor.formatOnSave": true,
+  "black-formatter.args": ["--config", "${workspaceFolder}/.black"],
+  "editor.defaultFormatter": "ms-python.black-formatter"
+}
